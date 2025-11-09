@@ -1,6 +1,6 @@
-package com.termux.app;
+package com.andronux.termux.app;
 
-import com.termux.shared.termux.data.TermuxUrlUtils;
+import com.andronux.termux.shared.termux.data.TermuxUrlUtils;
 
 import org.junit.Assert;
 import org.junit.Test;

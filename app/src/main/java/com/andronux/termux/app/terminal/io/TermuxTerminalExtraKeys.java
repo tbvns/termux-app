@@ -1,4 +1,4 @@
-package com.termux.app.terminal.io;
+package com.andronux.termux.app.terminal.io;
 
 import android.annotation.SuppressLint;
 import android.view.Gravity;
@@ -7,16 +7,16 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.drawerlayout.widget.DrawerLayout;
 
-import com.termux.app.TermuxActivity;
-import com.termux.app.terminal.TermuxTerminalSessionActivityClient;
-import com.termux.app.terminal.TermuxTerminalViewClient;
-import com.termux.shared.logger.Logger;
-import com.termux.shared.termux.extrakeys.ExtraKeysConstants;
-import com.termux.shared.termux.extrakeys.ExtraKeysInfo;
-import com.termux.shared.termux.settings.properties.TermuxPropertyConstants;
-import com.termux.shared.termux.settings.properties.TermuxSharedProperties;
-import com.termux.shared.termux.terminal.io.TerminalExtraKeys;
-import com.termux.view.TerminalView;
+import com.andronux.termux.app.TermuxActivity;
+import com.andronux.termux.app.terminal.TermuxTerminalSessionActivityClient;
+import com.andronux.termux.app.terminal.TermuxTerminalViewClient;
+import com.andronux.termux.shared.logger.Logger;
+import com.andronux.termux.shared.termux.extrakeys.ExtraKeysConstants;
+import com.andronux.termux.shared.termux.extrakeys.ExtraKeysInfo;
+import com.andronux.termux.shared.termux.settings.properties.TermuxPropertyConstants;
+import com.andronux.termux.shared.termux.settings.properties.TermuxSharedProperties;
+import com.andronux.termux.shared.termux.terminal.io.TerminalExtraKeys;
+import com.andronux.termux.view.TerminalView;
 
 import org.json.JSONException;
 

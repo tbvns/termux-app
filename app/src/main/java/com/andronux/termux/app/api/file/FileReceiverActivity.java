@@ -1,4 +1,4 @@
-package com.termux.app.api.file;
+package com.andronux.termux.app.api.file;
 
 import android.content.Context;
 import android.content.Intent;
@@ -10,21 +10,21 @@ import android.util.Patterns;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.termux.R;
-import com.termux.shared.android.PackageUtils;
-import com.termux.shared.data.DataUtils;
-import com.termux.shared.data.IntentUtils;
-import com.termux.shared.net.uri.UriUtils;
-import com.termux.shared.interact.MessageDialogUtils;
-import com.termux.shared.net.uri.UriScheme;
-import com.termux.shared.termux.interact.TextInputDialogUtils;
-import com.termux.shared.termux.TermuxConstants;
-import com.termux.shared.termux.TermuxConstants.TERMUX_APP;
-import com.termux.shared.termux.TermuxConstants.TERMUX_APP.TERMUX_SERVICE;
-import com.termux.app.TermuxService;
-import com.termux.shared.logger.Logger;
-import com.termux.shared.termux.settings.properties.TermuxAppSharedProperties;
-import com.termux.shared.termux.settings.properties.TermuxPropertyConstants;
+import com.andronux.termux.R;
+import com.andronux.termux.shared.android.PackageUtils;
+import com.andronux.termux.shared.data.DataUtils;
+import com.andronux.termux.shared.data.IntentUtils;
+import com.andronux.termux.shared.net.uri.UriUtils;
+import com.andronux.termux.shared.interact.MessageDialogUtils;
+import com.andronux.termux.shared.net.uri.UriScheme;
+import com.andronux.termux.shared.termux.interact.TextInputDialogUtils;
+import com.andronux.termux.shared.termux.TermuxConstants;
+import com.andronux.termux.shared.termux.TermuxConstants.TERMUX_APP;
+import com.andronux.termux.shared.termux.TermuxConstants.TERMUX_APP.TERMUX_SERVICE;
+import com.andronux.termux.app.TermuxService;
+import com.andronux.termux.shared.logger.Logger;
+import com.andronux.termux.shared.termux.settings.properties.TermuxAppSharedProperties;
+import com.andronux.termux.shared.termux.settings.properties.TermuxPropertyConstants;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;

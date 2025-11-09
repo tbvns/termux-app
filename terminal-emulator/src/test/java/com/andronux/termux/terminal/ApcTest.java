@@ -1,4 +1,4 @@
-package com.termux.terminal;
+package com.andronux.termux.terminal;
 
 public class ApcTest extends TerminalTestCase {
 

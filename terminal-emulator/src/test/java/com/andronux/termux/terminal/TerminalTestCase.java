@@ -1,4 +1,4 @@
-package com.termux.terminal;
+package com.andronux.termux.terminal;
 
 import junit.framework.AssertionFailedError;
 import junit.framework.TestCase;
