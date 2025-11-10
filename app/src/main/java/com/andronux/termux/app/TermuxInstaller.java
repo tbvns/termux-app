@@ -250,7 +250,9 @@ final class TermuxInstaller {
      */
     private static void ensureTermuxPropertiesExists(Activity activity) {
         try {
-            File termuxConfigDir = new File(TERMUX_PREFIX_DIR_PATH, "home/.termux");
+            // Use the correct home directory path
+            File homeDir = new File("/data/data/com.andronux.termux/files/home");
+            File termuxConfigDir = new File(homeDir, ".termux");
             File termuxPropertiesFile = new File(termuxConfigDir, "termux.properties");
 
             // Create directory if it doesn't exist
@@ -264,10 +266,7 @@ final class TermuxInstaller {
             // Create or update termux.properties
             String config = "# Termux configuration\n" +
                 "# Allow external apps to execute commands via RunCommandService\n" +
-                "allow-external-apps = true\n" +
-                "\n" +
-                "# Extra keys configuration\n" +
-                "extra-keys = [[ESC, ALT, {key: '-', popup: '_'}, {key: '|', popup: '\\\\'}]]\n";
+                "allow-external-apps = true\n";
 
             try (FileOutputStream fos = new FileOutputStream(termuxPropertiesFile)) {
                 fos.write(config.getBytes(StandardCharsets.UTF_8));

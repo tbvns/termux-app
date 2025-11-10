@@ -44,7 +44,7 @@
         android:banner="@drawable/banner"
         android:extractNativeLibs="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/application_name"
+        android:label="Andronux Termux"
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="false"
@@ -55,19 +55,17 @@
             android:name=".app.TermuxActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|density|screenLayout|keyboard|keyboardHidden|navigation"
-            android:label="@string/application_name"
+            android:label="Andronux Termux"
             android:launchMode="singleTask"
             android:resizeableActivity="true"
             android:theme="@style/Theme.TermuxActivity.DayNight.NoActionBar"
             tools:targetApi="n">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
 
@@ -93,7 +91,7 @@
         <activity
             android:name=".app.activities.HelpActivity"
             android:exported="false"
-            android:label="@string/application_name"
+            android:label="Andronux Termux"
             android:parentActivityName=".app.TermuxActivity"
             android:resizeableActivity="true"
             tools:targetApi="n" />
@@ -101,7 +99,7 @@
         <activity
             android:name=".app.activities.SettingsActivity"
             android:exported="true"
-            android:label="@string/title_activity_termux_settings"
+            android:label="Andronux Termux Settings"
             android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
 
         <activity
