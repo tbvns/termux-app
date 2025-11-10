@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Environment;
 import android.system.Os;
@@ -23,16 +25,14 @@ import com.andronux.termux.shared.termux.TermuxConstants;
 import com.andronux.termux.shared.termux.TermuxUtils;
 import com.andronux.termux.shared.termux.shell.command.environment.TermuxShellEnvironment;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import static androidx.core.app.ActivityCompat.finishAffinity;
 import static com.andronux.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR;
 import static com.andronux.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR_PATH;
 import static com.andronux.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR;
@@ -218,6 +218,10 @@ final class TermuxInstaller {
 
                     Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
 
+                    // Generate termux.properties config file
+                    Logger.logInfo(LOG_TAG, "Generating termux.properties configuration file.");
+                    ensureTermuxPropertiesExists(activity);
+
                     // Recreate env file since termux prefix was wiped earlier
                     TermuxShellEnvironment.writeEnvironmentToFile(activity);
 
@@ -239,6 +243,43 @@ final class TermuxInstaller {
         }.start();
     }
 
+
+    /**
+     * Ensures termux.properties file exists with default configuration
+     * including allow-external-apps = true for RunCommandService
+     */
+    private static void ensureTermuxPropertiesExists(Activity activity) {
+        try {
+            File termuxConfigDir = new File(TERMUX_PREFIX_DIR_PATH, "home/.termux");
+            File termuxPropertiesFile = new File(termuxConfigDir, "termux.properties");
+
+            // Create directory if it doesn't exist
+            if (!termuxConfigDir.exists()) {
+                if (!termuxConfigDir.mkdirs()) {
+                    Logger.logWarn(LOG_TAG, "Failed to create termux config directory: " + termuxConfigDir.getAbsolutePath());
+                    return;
+                }
+            }
+
+            // Create or update termux.properties
+            String config = "# Termux configuration\n" +
+                "# Allow external apps to execute commands via RunCommandService\n" +
+                "allow-external-apps = true\n" +
+                "\n" +
+                "# Extra keys configuration\n" +
+                "extra-keys = [[ESC, ALT, {key: '-', popup: '_'}, {key: '|', popup: '\\\\'}]]\n";
+
+            try (FileOutputStream fos = new FileOutputStream(termuxPropertiesFile)) {
+                fos.write(config.getBytes(StandardCharsets.UTF_8));
+                fos.flush();
+            }
+
+            Logger.logInfo(LOG_TAG, "termux.properties created successfully at: " + termuxPropertiesFile.getAbsolutePath());
+
+        } catch (IOException e) {
+            Logger.logError(LOG_TAG, "Failed to create termux.properties: " + e.getMessage());
+        }
+    }
     public static void showBootstrapErrorDialog(Activity activity, Runnable whenDone, String message) {
         Logger.logErrorExtended(LOG_TAG, "Bootstrap Error:\n" + message);
 
