@@ -5,15 +5,26 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.system.Os;
+import android.util.Log;
 import android.util.Pair;
 import android.view.WindowManager;
 
+import android.widget.Toast;
 import com.andronux.termux.R;
+import com.andronux.termux.app.andronux.GitUtils;
+import com.andronux.termux.app.terminal.TermuxTerminalSessionActivityClient;
+import com.andronux.termux.shared.data.IntentUtils;
 import com.andronux.termux.shared.file.FileUtils;
+import com.andronux.termux.shared.shell.command.ExecutionCommand;
 import com.andronux.termux.shared.termux.crash.TermuxCrashUtils;
 import com.andronux.termux.shared.termux.file.TermuxFileUtils;
 import com.andronux.termux.shared.interact.MessageDialogUtils;
@@ -24,6 +35,7 @@ import com.andronux.termux.shared.android.PackageUtils;
 import com.andronux.termux.shared.termux.TermuxConstants;
 import com.andronux.termux.shared.termux.TermuxUtils;
 import com.andronux.termux.shared.termux.shell.command.environment.TermuxShellEnvironment;
+import com.andronux.termux.shared.termux.shell.command.runner.terminal.TermuxSession;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -218,6 +230,17 @@ final class TermuxInstaller {
 
                     Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
 
+
+                    Logger.logInfo(LOG_TAG, "Installing proot and arch linux.");
+                    installProotAndArchLinux(activity, () -> {
+                        Logger.logInfo(LOG_TAG, "Finished installing Proot Distro and Arch Linux");
+                    });
+
+                    Logger.logInfo(LOG_TAG, "Checking overlay permission before bootstrap installation...");
+                    activity.runOnUiThread(() -> requestOverlayPermission(activity, () -> {
+                        Logger.logInfo(LOG_TAG, "Overlay permission check passed.");
+                    }));
+
                     // Generate termux.properties config file
                     Logger.logInfo(LOG_TAG, "Generating termux.properties configuration file.");
                     ensureTermuxPropertiesExists(activity);
@@ -279,6 +302,137 @@ final class TermuxInstaller {
             Logger.logError(LOG_TAG, "Failed to create termux.properties: " + e.getMessage());
         }
     }
+
+    static void installProotAndArchLinux(final Activity activity, final Runnable whenDone) {
+        // Create ProgressDialog on UI thread
+        activity.runOnUiThread(() -> {
+            final ProgressDialog progress = ProgressDialog.show(
+                activity,
+                null,
+                "Installing Arch Linux...",
+                true,
+                false
+            );
+
+            // Do heavy work on background thread
+            new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        Logger.logInfo(LOG_TAG, "Starting PRoot and Arch Linux installation.");
+
+                        String homeDir = "/data/data/com.andronux.termux/files/home";
+                        File proofDistroDir = new File(homeDir, "proot-distro");
+
+                        // Clone proot-distro
+                        GitUtils.clone(
+                            "https://github.com/tbvns/proot-distro.git",
+                            proofDistroDir.getAbsolutePath(),
+                            new GitUtils.GitCloneCallback() {
+                                @Override
+                                public void onSuccess() {
+                                    Logger.logInfo(LOG_TAG, "PRoot distro cloned successfully.");
+                                    // Switch back to UI thread for next operation
+                                    activity.runOnUiThread(() -> {
+                                        executeInstallScript(activity, homeDir, whenDone, progress);
+                                    });
+                                }
+
+                                @Override
+                                public void onError(Exception e) {
+                                    Logger.logError(LOG_TAG, "Failed to clone proot-distro: " + e.getMessage());
+                                    activity.runOnUiThread(() -> {
+                                        dismissProgress(progress);
+                                        showBootstrapErrorDialog(activity, whenDone,
+                                            "PRoot distro clone failed:\n" + e.getMessage());
+                                    });
+                                }
+                            }
+                        );
+
+                    } catch (final Exception e) {
+                        Logger.logError(LOG_TAG, "PRoot installation failed: " + e.getMessage());
+                        activity.runOnUiThread(() -> {
+                            dismissProgress(progress);
+                            showBootstrapErrorDialog(activity, whenDone,
+                                Logger.getStackTracesMarkdownString(null, Logger.getStackTracesStringArray(e)));
+                        });
+                    }
+                }
+            }.start();
+        });
+    }
+
+    private static void executeInstallScript(
+        Context context,
+        String homeDir,
+        Runnable whenDone,
+        ProgressDialog progress) {
+
+        // This is now called on UI thread
+        try {
+            String command = "/data/data/com.andronux.termux/files/usr/bin/bash";
+            Uri execUri = new Uri.Builder()
+                .scheme(TermuxConstants.TERMUX_APP.TERMUX_SERVICE.URI_SCHEME_SERVICE_EXECUTE)
+                .path(command)
+                .build();
+
+            Intent execIntent = new Intent(
+                TermuxConstants.TERMUX_APP.TERMUX_SERVICE.ACTION_SERVICE_EXECUTE,
+                execUri
+            );
+            execIntent.setClass(context, TermuxService.class);
+            execIntent.putExtra(
+                TermuxConstants.TERMUX_APP.TERMUX_SERVICE.EXTRA_ARGUMENTS,
+                new String[]{
+                    "-c",
+                    "cd proot-distro && ./install.sh && proot-distro install archlinux"
+                }
+            );
+            execIntent.putExtra(
+                TermuxConstants.TERMUX_APP.TERMUX_SERVICE.EXTRA_WORKDIR,
+                homeDir
+            );
+            execIntent.putExtra(
+                TermuxConstants.TERMUX_APP.TERMUX_SERVICE.EXTRA_RUNNER,
+                ExecutionCommand.Runner.TERMINAL_SESSION.getName()
+            );
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(execIntent);
+            } else {
+                context.startService(execIntent);
+            }
+
+            Logger.logInfo(LOG_TAG, "Installation script started.");
+
+            // Dismiss progress after short delay on main thread
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                dismissProgress(progress);
+                if (whenDone != null) {
+                    whenDone.run();
+                }
+            }, 1000);
+
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to execute install script: " + e.getMessage());
+            dismissProgress(progress);
+            if (context instanceof Activity) {
+                Activity activity = (Activity) context;
+                showBootstrapErrorDialog(activity, whenDone,
+                    "Installation script failed:\n" + e.getMessage());
+            }
+        }
+    }
+
+    private static void dismissProgress(ProgressDialog progress) {
+        try {
+            progress.dismiss();
+        } catch (RuntimeException e) {
+            // Activity already dismissed - ignore
+        }
+    }
+
     public static void showBootstrapErrorDialog(Activity activity, Runnable whenDone, String message) {
         Logger.logErrorExtended(LOG_TAG, "Bootstrap Error:\n" + message);
 
@@ -422,5 +576,100 @@ final class TermuxInstaller {
     }
 
     public static native byte[] getZip();
+
+    // Add this constant for the request code
+    private static final int REQUEST_OVERLAY_PERMISSION = 1234;
+
+    /**
+     * Checks if the app has permission to draw over other apps.
+     * @param context The application context
+     * @return true if permission is granted, false otherwise
+     */
+    public static boolean hasOverlayPermission(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return Settings.canDrawOverlays(context);
+        }
+        return true; // Permission not required on older Android versions
+    }
+
+    /**
+     * Requests permission to draw over other apps.
+     * Shows a dialog explaining why the permission is needed, then navigates to settings.
+     * @param activity The current activity
+     * @param onGranted Callback to run when permission is granted or not required
+     */
+    public static void requestOverlayPermission(final Activity activity, final Runnable onGranted) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (!Settings.canDrawOverlays(activity)) {
+                new AlertDialog.Builder(activity)
+                    .setTitle("Permission Required")
+                    .setMessage("On Android 10+, Andronux requires permission to display over other apps. This is mandatory for creating terminal sessions in the background.\n\nWithout this permission, the app might not function properly.\n\nYou will be redirected to settings to grant this permission.")
+                    .setPositiveButton("Grant Permission", (dialog, which) -> {
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:" + activity.getPackageName()));
+                        activity.startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION);
+                    })
+                    .setNegativeButton("Refuse", (dialog, which) -> {
+                        dialog.dismiss();
+                        Toast.makeText(activity,
+                            "Overlay permission is required, the app might break without.",
+                            Toast.LENGTH_LONG).show();
+                    })
+                    .setCancelable(false)
+                    .show();
+            } else {
+                Logger.logInfo(LOG_TAG, "Overlay permission already granted");
+                if (onGranted != null) {
+                    onGranted.run();
+                }
+            }
+        } else {
+            // Permission not required on Android 9 and below
+            Logger.logInfo(LOG_TAG, "Overlay permission not required on Android version " + Build.VERSION.SDK_INT);
+            if (onGranted != null) {
+                onGranted.run();
+            }
+        }
+    }
+
+    /**
+     * Requests permission to draw over other apps without showing explanation dialog.
+     * Directly navigates to settings.
+     * @param activity The current activity
+     */
+    public static void requestOverlayPermissionDirect(Activity activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(activity)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + activity.getPackageName()));
+                activity.startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION);
+            }
+        }
+    }
+
+    /**
+     * Call this method in your Activity's onActivityResult to handle the permission result
+     * @param requestCode The request code
+     * @param activity The current activity
+     * @param callback Optional callback to execute after permission check
+     */
+    public static void handleOverlayPermissionResult(int requestCode, Activity activity, Runnable callback) {
+        if (requestCode == REQUEST_OVERLAY_PERMISSION) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (Settings.canDrawOverlays(activity)) {
+                    Toast.makeText(activity, "Overlay permission granted successfully",
+                        Toast.LENGTH_SHORT).show();
+                    Logger.logInfo(LOG_TAG, "Overlay permission granted");
+                    if (callback != null) {
+                        callback.run();
+                    }
+                } else {
+                    Toast.makeText(activity, "Overlay permission denied",
+                        Toast.LENGTH_LONG).show();
+                    Logger.logWarn(LOG_TAG, "Overlay permission denied by user");
+                }
+            }
+        }
+    }
 
 }

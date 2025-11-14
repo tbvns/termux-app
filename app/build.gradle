@@ -35,6 +35,9 @@ android {
 
         implementation project(":terminal-view")
         implementation project(":termux-shared")
+
+        // https://mvnrepository.com/artifact/org.eclipse.jgit/org.eclipse.jgit
+        implementation 'org.eclipse.jgit:org.eclipse.jgit:6.8.0.202311291450-r'
     }
 
     defaultConfig {
