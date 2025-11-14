@@ -21,6 +21,10 @@ public class TermuxApplication extends Application {
 
     private static final String LOG_TAG = "TermuxApplication";
 
+
+
+
+
     public void onCreate() {
         super.onCreate();
 

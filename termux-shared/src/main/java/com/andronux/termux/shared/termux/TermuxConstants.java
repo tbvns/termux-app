@@ -340,7 +340,7 @@ public final class TermuxConstants {
     public static final String FDROID_PACKAGES_BASE_URL = "https://f-droid.org/en/packages"; // Default: "https://f-droid.org/en/packages"
 
 
-
+    
 
 
     /*
@@ -348,7 +348,7 @@ public final class TermuxConstants {
      */
 
     /** Termux app name */
-    public static final String TERMUX_APP_NAME = "Termux"; // Default: "Termux"
+    public static final String TERMUX_APP_NAME = "Andronux Termux"; // Default: "Termux"
     /** Termux package name */
     public static final String TERMUX_PACKAGE_NAME = "com.andronux.termux"; // Default: "com.andronux.termux"
     /** Termux GitHub repo name */
