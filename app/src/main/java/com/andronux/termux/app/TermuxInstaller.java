@@ -309,7 +309,7 @@ final class TermuxInstaller {
             final ProgressDialog progress = ProgressDialog.show(
                 activity,
                 null,
-                "Installing Arch Linux...",
+                "Installing Arch Linux...\nYou will be brought back to this empty terminal once done.",
                 true,
                 false
             );
@@ -377,6 +377,11 @@ final class TermuxInstaller {
                 .path(command)
                 .build();
 
+            // Read install script from resources
+            InputStream scriptStream = context.getResources()
+                .openRawResource(R.raw.install_script);
+            String installScript = readStream(scriptStream);
+
             Intent execIntent = new Intent(
                 TermuxConstants.TERMUX_APP.TERMUX_SERVICE.ACTION_SERVICE_EXECUTE,
                 execUri
@@ -386,7 +391,7 @@ final class TermuxInstaller {
                 TermuxConstants.TERMUX_APP.TERMUX_SERVICE.EXTRA_ARGUMENTS,
                 new String[]{
                     "-c",
-                    "cd proot-distro && ./install.sh && proot-distro install archlinux"
+                    installScript
                 }
             );
             execIntent.putExtra(
@@ -425,6 +430,17 @@ final class TermuxInstaller {
         }
     }
 
+    private static String readStream(InputStream stream) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(
+            new InputStreamReader(stream))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+        }
+        return sb.toString();
+    }
     private static void dismissProgress(ProgressDialog progress) {
         try {
             progress.dismiss();
