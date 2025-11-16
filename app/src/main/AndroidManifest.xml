@@ -20,6 +20,13 @@
         android:label="@string/permission_run_command_label"
         android:protectionLevel="dangerous" />
 
+    <permission
+        android:name="${TERMUX_PACKAGE_NAME}.permission.FILE_SHARE"
+        android:description="@string/permission_file_share_description"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/permission_file_share_label"
+        android:protectionLevel="dangerous" />
+
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -203,6 +210,16 @@
             android:permission="${TERMUX_PACKAGE_NAME}.permission.RUN_COMMAND">
             <intent-filter>
                 <action android:name="${TERMUX_PACKAGE_NAME}.RUN_COMMAND" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".app.FileShareService"
+            android:exported="true"
+            android:permission="${TERMUX_PACKAGE_NAME}.permission.FILE_SHARE"
+            android:foregroundServiceType="dataSync">
+            <intent-filter>
+                <action android:name="${TERMUX_PACKAGE_NAME}.FILE_SHARE" />
             </intent-filter>
         </service>
 

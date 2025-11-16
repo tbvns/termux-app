@@ -23,7 +23,9 @@
     <string name="permission_run_command_description">execute arbitrary commands within &TERMUX_APP_NAME;
         environment and access files</string>
 
-
+    <!-- Termux FILE_SHARE permission -->
+    <string name="permission_file_share_label">Fetch files from &TERMUX_APP_NAME; environment</string>
+    <string name="permission_file_share_description">fetch files from the termux environement</string>
 
     <!-- Termux Bootstrap Packages Installation -->
     <string name="bootstrap_installer_body">Installing bootstrap packages…</string>

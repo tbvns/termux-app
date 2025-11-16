@@ -853,6 +853,10 @@ public final class TermuxConstants {
     public static final String TERMUX_RUN_COMMAND_NOTIFICATION_CHANNEL_ID = "termux_run_command_notification_channel";
     /** Termux app notification channel name used by {@link TERMUX_APP.RUN_COMMAND_SERVICE} */
     public static final String TERMUX_RUN_COMMAND_NOTIFICATION_CHANNEL_NAME = TermuxConstants.TERMUX_APP_NAME + " RunCommandService";
+
+    /** Termux app notification channel id used by {@link com.andronux.termux.app.FileShareService} */
+    public static final String TERMUX_FILE_SHARE_NOTIFICATION_CHANNEL_ID = "termux_file_share_notification_channel";
+
     /** Termux app unique notification id used by {@link TERMUX_APP.RUN_COMMAND_SERVICE} */
     public static final int TERMUX_RUN_COMMAND_NOTIFICATION_ID = 1338;
 
@@ -907,11 +911,6 @@ public final class TermuxConstants {
 
     /** Environment variable prefix root for the Termux app. */
     public static final String TERMUX_ENV_PREFIX_ROOT = "TERMUX";
-
-
-
-
-
 
     /**
      * Termux app constants.
