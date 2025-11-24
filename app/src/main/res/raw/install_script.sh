@@ -49,9 +49,9 @@ proot-distro login archlinux -- bash -c '
   chmod +x /bin/htterm
   echo -e "${GREEN}✓ htterm ready${NC}" >&2
 
-  echo -e "${RED}Updating glibc (packages need it, bash will suffer)${NC}" >&2
-  pacman -Syu --noconfirm
-  echo -e "${GREEN}✓ Updated (bash is now broken)${NC}" >&2
+  echo -e "${RED}Updating packages and installing some dependencies${NC}" >&2
+  pacman -Syu --noconfirm imagemagick
+  echo -e "${GREEN}✓ Updated (bash is now broken :sob:)${NC}" >&2
 
   echo -e "${YELLOW}Installing display stack...${NC}" >&2
   pacman -S xorg-server-xvfb x11vnc --noconfirm
