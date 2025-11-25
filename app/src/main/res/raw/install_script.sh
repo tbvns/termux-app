@@ -49,9 +49,21 @@ proot-distro login archlinux -- bash -c '
   chmod +x /bin/htterm
   echo -e "${GREEN}✓ htterm ready${NC}" >&2
 
-  echo -e "${RED}Updating packages and installing some dependencies${NC}" >&2
-  pacman -Syu --noconfirm imagemagick
-  echo -e "${GREEN}✓ Updated (bash is now broken :sob:)${NC}" >&2
+  echo -e "${RED}Updating packages and installing dependencies${NC}" >&2
+  pacman -Syu --noconfirm imagemagick android-tools jdk-openjdk base-devel zip git
+  echo -e "${GREEN}✓ Updated${NC}" >&2
+
+  echo -e "${YELLOW}Installing yay (AUR helper)...${NC}" >&2
+  cd /tmp
+  git clone https://aur.archlinux.org/yay.git
+  cd yay
+  makepkg -si --noconfirm
+  cd /
+  echo -e "${GREEN}✓ yay installed${NC}" >&2
+
+  echo -e "${YELLOW}Installing aapt and apksigner from AUR...${NC}" >&2
+  yay -S --noconfirm android-sdk-build-tools
+  echo -e "${GREEN}✓ aapt and apksigner ready${NC}" >&2
 
   echo -e "${YELLOW}Installing display stack...${NC}" >&2
   pacman -S xorg-server-xvfb x11vnc --noconfirm
@@ -62,7 +74,7 @@ proot-distro login archlinux -- bash -c '
   echo -e "${GREEN}✓ Openbox installed${NC}" >&2
 
   echo -e "${YELLOW}Installing GUI apps...${NC}" >&2
-  pacman -S dolphin firefox chromium xterm xdg-utils --noconfirm --overwrite "*"
+  pacman -S dolphin firefox xterm xdg-utils --noconfirm --overwrite "*"
   echo -e "${GREEN}✓ File manager, browsers, and terminal ready${NC}" >&2
 
   echo -e "${YELLOW}Installing busybox (the real MVP)...${NC}" >&2
@@ -119,9 +131,11 @@ The Solution:
   Use busybox sh (lightweight, reliable)
 
 What Works:
-  + Firefox, Chromium (full GUI)
+  + Firefox (full GUI)
   + Dolphin file manager
   + Busybox utils (vi, sed, awk, grep, find)
+  + Java development environment
+  + Android build tools (aapt, apksigner)
 
 What Doesn'\''t:
   - bash, nano, vim, neovim
@@ -148,7 +162,7 @@ echo -e "${GREEN}The Solution:${NC}" >&2
 echo -e "  Use busybox sh (lightweight, reliable)" >&2
 echo ""
 echo -e "${GREEN}What Works:${NC}" >&2
-echo -e "  + Firefox, Chromium (full GUI)" >&2
+echo -e "  + Firefox (full GUI)" >&2
 echo -e "  + Dolphin file manager" >&2
 echo -e "  + Busybox utils (vi, sed, awk, grep, find)" >&2
 echo ""
