@@ -50,20 +50,52 @@ proot-distro login archlinux -- bash -c '
   echo -e "${GREEN}✓ htterm ready${NC}" >&2
 
   echo -e "${RED}Updating packages and installing dependencies${NC}" >&2
-  pacman -Syu --noconfirm imagemagick android-tools jdk-openjdk base-devel zip git
+  pacman -Syu --noconfirm imagemagick jdk-openjdk base-devel zip git sudo unzip
   echo -e "${GREEN}✓ Updated${NC}" >&2
 
-  echo -e "${YELLOW}Installing yay (AUR helper)...${NC}" >&2
+  echo -e "${YELLOW}Creating non-root andronux user...${NC}" >&2
+  useradd -m -s /bin/sh andronux || true
+  echo "andronux" | passwd andronux --stdin 2>/dev/null || echo "andronux:andronux" | chpasswd
+  echo -e "${GREEN}✓ User andronux created${NC}" >&2
+
+  echo -e "${YELLOW}Setting up sudoers for andronux (NOPASSWD)...${NC}" >&2
+  echo "andronux ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/andronux
+  chmod 0440 /etc/sudoers.d/andronux
+  echo -e "${GREEN}✓ Sudoers configured${NC}" >&2
+
+  echo -e "${YELLOW}Installing yay (AUR helper) as andronux...${NC}" >&2
   cd /tmp
-  git clone https://aur.archlinux.org/yay.git
+  sudo -u andronux git clone https://aur.archlinux.org/yay.git
   cd yay
-  makepkg -si --noconfirm
+  sudo -u andronux makepkg -si --noconfirm
   cd /
+  rm -rf /tmp/yay
   echo -e "${GREEN}✓ yay installed${NC}" >&2
 
-  echo -e "${YELLOW}Installing aapt and apksigner from AUR...${NC}" >&2
-  yay -S --noconfirm android-sdk-build-tools
-  echo -e "${GREEN}✓ aapt and apksigner ready${NC}" >&2
+  echo -e "${YELLOW}Downloading ARM64 Android SDK tools...${NC}" >&2
+  cd /tmp
+  curl -fL https://github.com/lzhiyong/android-sdk-tools/releases/download/35.0.2/android-sdk-tools-static-aarch64.zip -o tools.zip
+  unzip -o tools.zip build-tools/
+  mv build-tools/* /usr/local/bin/
+  chmod +x /usr/local/bin/*
+  rm -rf tools.zip build-tools
+  aapt version
+  zipalign -v
+  echo -e "${GREEN}✓ Android SDK tools (ARM64) ready${NC}" >&2
+
+  echo -e "${YELLOW}Downloading uber-apk-signer...${NC}" >&2
+  cd /tmp
+  curl -fL https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar -o uber-apk-signer.jar
+  mv uber-apk-signer.jar /usr/local/bin/
+  chmod +x /usr/local/bin/uber-apk-signer.jar
+  echo -e "${GREEN}✓ uber-apk-signer ready${NC}" >&2
+
+  echo -e "${YELLOW}Downloading Android Platform JAR (android.jar)...${NC}" >&2
+  mkdir -p /usr/local/lib
+  cd /tmp
+  curl -fL https://raw.githubusercontent.com/Sable/android-platforms/master/android-34/android.jar -o /usr/local/lib/android.jar
+  ls -lh /usr/local/lib/android.jar
+  echo -e "${GREEN}✓ android.jar installed to /usr/local/lib/${NC}" >&2
 
   echo -e "${YELLOW}Installing display stack...${NC}" >&2
   pacman -S xorg-server-xvfb x11vnc --noconfirm
@@ -74,7 +106,7 @@ proot-distro login archlinux -- bash -c '
   echo -e "${GREEN}✓ Openbox installed${NC}" >&2
 
   echo -e "${YELLOW}Installing GUI apps...${NC}" >&2
-  pacman -S dolphin firefox xterm xdg-utils --noconfirm --overwrite "*"
+  pacman -S dolphin firefox chromium xterm xdg-utils --noconfirm --overwrite "*"
   echo -e "${GREEN}✓ File manager, browsers, and terminal ready${NC}" >&2
 
   echo -e "${YELLOW}Installing busybox (the real MVP)...${NC}" >&2
@@ -121,28 +153,21 @@ EOF
   cat > /root/.profile << '\''EOF'\''
 # ~/.profile - Login shell startup
 cat << '\''BANNER'\''
-======== GLIBC/BASH INCOMPATIBILITY NOTICE ========
+======== SETUP COMPLETE ========
 
-The Problem:
-  Old glibc → bash works, but packages fail
-  New glibc → packages work, but bash breaks
+Environment:
+  ✓ yay (AUR helper available)
+  ✓ aapt (ARM64 - Android Asset Packaging Tool)
+  ✓ android.jar (Android 34 Platform)
+  ✓ imagemagick (Image conversion)
 
-The Solution:
-  Use busybox sh (lightweight, reliable)
+Desktop:
+  ✓ Firefox, Chromium (full GUI)
+  ✓ Dolphin file manager
+  ✓ Openbox window manager
 
-What Works:
-  + Firefox (full GUI)
-  + Dolphin file manager
-  + Busybox utils (vi, sed, awk, grep, find)
-  + Java development environment
-  + Android build tools (aapt, apksigner)
-
-What Doesn'\''t:
-  - bash, nano, vim, neovim
-  - Most CLI pacman tools
-
-Tip: Use vi instead of nano, and you'\''re golden!
-====================================================
+Ready to build APK shortcuts!
+==================================
 BANNER
 EOF
   chmod +x /root/.profile
