@@ -153,21 +153,28 @@ EOF
   cat > /root/.profile << '\''EOF'\''
 # ~/.profile - Login shell startup
 cat << '\''BANNER'\''
-======== SETUP COMPLETE ========
+======== GLIBC/BASH INCOMPATIBILITY NOTICE ========
 
-Environment:
-  ✓ yay (AUR helper available)
-  ✓ aapt (ARM64 - Android Asset Packaging Tool)
-  ✓ android.jar (Android 34 Platform)
-  ✓ imagemagick (Image conversion)
+The Problem:
+  Old glibc → bash works, but packages fail
+  New glibc → packages work, but bash breaks
 
-Desktop:
-  ✓ Firefox, Chromium (full GUI)
-  ✓ Dolphin file manager
-  ✓ Openbox window manager
+The Solution:
+  Use busybox sh (lightweight, reliable)
 
-Ready to build APK shortcuts!
-==================================
+What Works:
+  + Firefox (full GUI)
+  + Dolphin file manager
+  + Busybox utils (vi, sed, awk, grep, find)
+  + Java development environment
+  + Android build tools (aapt, apksigner)
+
+What Doesn'\''t:
+  - bash, nano, vim, neovim
+  - Most CLI pacman tools
+
+Tip: Use vi instead of nano, and you'\''re golden!
+====================================================
 BANNER
 EOF
   chmod +x /root/.profile
