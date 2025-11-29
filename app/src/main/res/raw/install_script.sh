@@ -1,24 +1,42 @@
 #!/bin/bash
 set -e
 
-# Color codes
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}=== Starting proot-distro setup ===${NC}" >&2
+LOG_TAG="[Andronux-Bootstrap]"
 
-cd proot-distro
-echo -e "${YELLOW}Installing proot-distro...${NC}" >&2
-./install.sh
+echo -e "${BLUE}${LOG_TAG} Starting bootstrap installation...${NC}"
 
-echo -e "${YELLOW}Installing archlinux...${NC}" >&2
-proot-distro install archlinux
+# Get home directory
+HOME_DIR="/data/data/com.andronux.termux/files/home"
+PROOT_DISTRO_DIR="$HOME_DIR/proot-distro"
 
+# Step 1: Install proot-distro
+echo -e "${YELLOW}${LOG_TAG} Installing proot-distro...${NC}"
+if [ -f "$PROOT_DISTRO_DIR/install.sh" ]; then
+    cd "$PROOT_DISTRO_DIR"
+    bash install.sh
+    cd "$HOME_DIR"
+    echo -e "${GREEN}${LOG_TAG} proot-distro installed${NC}"
+else
+    echo -e "${RED}${LOG_TAG} proot-distro install.sh not found${NC}"
+    exit 1
+fi
+
+# Step 2: Install Ubuntu
+echo -e "${YELLOW}${LOG_TAG} Installing Ubuntu rootfs...${NC}"
+proot-distro install ubuntu
+echo -e "${GREEN}${LOG_TAG} Ubuntu installed${NC}"
+
+# Step 3: Configure Ubuntu inside proot
+echo -e "${YELLOW}${LOG_TAG} Configuring Ubuntu environment...${NC}"
 # shellcheck disable=SC2016
-proot-distro login archlinux -- bash -c '
+proot-distro login ubuntu -- bash -c '
   set -e
 
   RED="\033[0;31m"
@@ -27,102 +45,112 @@ proot-distro login archlinux -- bash -c '
   BLUE="\033[0;34m"
   NC="\033[0m"
 
+  LOG_TAG="[Ubuntu-Setup]"
+
+  # Detect architecture
   arch=$(uname -m)
-  echo -e "${BLUE}Architecture: $arch${NC}" >&2
+  echo -e "${BLUE}${LOG_TAG} Architecture: $arch${NC}"
 
   case "$arch" in
     x86_64)
-      echo -e "${YELLOW}Grabbing htterm for amd64...${NC}" >&2
-      curl -o htterm https://github.com/tbvns/htterm/releases/download/1.0.0/htterm-amd64
+      HTTERM_ARCH="amd64"
       ;;
     aarch64)
-      echo -e "${YELLOW}Grabbing htterm for arm64...${NC}" >&2
-      curl -o htterm https://github.com/tbvns/htterm/releases/download/1.0.0/htterm-arm64
+      HTTERM_ARCH="arm64"
       ;;
     *)
-      echo -e "${RED}✗ Unsupported: $arch${NC}" >&2
+      echo -e "${RED}${LOG_TAG} Unsupported architecture: $arch${NC}"
       exit 1
       ;;
   esac
 
-  mv ./htterm /bin/htterm
+  # 1. Install htterm
+  echo -e "${YELLOW}${LOG_TAG} Installing htterm...${NC}"
+  curl -fL -o /tmp/htterm https://github.com/tbvns/htterm/releases/download/1.0.0/htterm-${HTTERM_ARCH}
+  mv /tmp/htterm /bin/htterm
   chmod +x /bin/htterm
-  echo -e "${GREEN}✓ htterm ready${NC}" >&2
+  echo -e "${GREEN}${LOG_TAG} htterm installed${NC}"
 
-  echo -e "${RED}Updating packages and installing dependencies${NC}" >&2
-  pacman -Syu --noconfirm imagemagick jdk-openjdk base-devel zip git sudo unzip
-  echo -e "${GREEN}✓ Updated${NC}" >&2
+  # 2. Update system and install dependencies
+  echo -e "${YELLOW}${LOG_TAG} Updating system and installing dependencies...${NC}"
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update
+  apt-get upgrade -y
+  apt-get install -y \
+    imagemagick \
+    openjdk-21-jdk \
+    build-essential \
+    zip \
+    git \
+    sudo \
+    unzip \
+    curl \
+    wget \
+    xvfb \
+    openbox \
+    dolphin \
+    firefox \
+    chromium-browser \
+    xterm \
+    xdg-utils \
+    busybox-static \
+    tigervnc-standalone-server
+  echo -e "${GREEN}${LOG_TAG} Dependencies installed${NC}"
 
-  echo -e "${YELLOW}Creating non-root andronux user...${NC}" >&2
-  useradd -m -s /bin/sh andronux || true
-  echo "andronux" | passwd andronux --stdin 2>/dev/null || echo "andronux:andronux" | chpasswd
-  echo -e "${GREEN}✓ User andronux created${NC}" >&2
-
-  echo -e "${YELLOW}Setting up sudoers for andronux (NOPASSWD)...${NC}" >&2
-  echo "andronux ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/andronux
-  chmod 0440 /etc/sudoers.d/andronux
-  echo -e "${GREEN}✓ Sudoers configured${NC}" >&2
-
-  echo -e "${YELLOW}Installing yay (AUR helper) as andronux...${NC}" >&2
-  cd /tmp
-  sudo -u andronux git clone https://aur.archlinux.org/yay.git
-  cd yay
-  sudo -u andronux makepkg -si --noconfirm
-  cd /
-  rm -rf /tmp/yay
-  echo -e "${GREEN}✓ yay installed${NC}" >&2
-
-  echo -e "${YELLOW}Downloading ARM64 Android SDK tools...${NC}" >&2
-  cd /tmp
-  curl -fL https://github.com/lzhiyong/android-sdk-tools/releases/download/35.0.2/android-sdk-tools-static-aarch64.zip -o tools.zip
-  unzip -o tools.zip build-tools/
-  mv build-tools/* /usr/local/bin/
-  chmod +x /usr/local/bin/*
-  rm -rf tools.zip build-tools
-  aapt version
-  zipalign -v
-  echo -e "${GREEN}✓ Android SDK tools (ARM64) ready${NC}" >&2
-
-  echo -e "${YELLOW}Downloading uber-apk-signer...${NC}" >&2
-  cd /tmp
-  curl -fL https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar -o uber-apk-signer.jar
-  mv uber-apk-signer.jar /usr/local/bin/
-  chmod +x /usr/local/bin/uber-apk-signer.jar
-  echo -e "${GREEN}✓ uber-apk-signer ready${NC}" >&2
-
-  echo -e "${YELLOW}Downloading Android Platform JAR (android.jar)...${NC}" >&2
-  mkdir -p /usr/local/lib
-  cd /tmp
-  curl -fL https://raw.githubusercontent.com/Sable/android-platforms/master/android-34/android.jar -o /usr/local/lib/android.jar
-  ls -lh /usr/local/lib/android.jar
-  echo -e "${GREEN}✓ android.jar installed to /usr/local/lib/${NC}" >&2
-
-  echo -e "${YELLOW}Installing display stack...${NC}" >&2
-  pacman -S xorg-server-xvfb x11vnc --noconfirm
-  echo -e "${GREEN}✓ VNC + Xvfb ready${NC}" >&2
-
-  echo -e "${YELLOW}Installing window manager...${NC}" >&2
-  pacman -S openbox --noconfirm
-  echo -e "${GREEN}✓ Openbox installed${NC}" >&2
-
-  echo -e "${YELLOW}Installing GUI apps...${NC}" >&2
-  pacman -S dolphin firefox chromium xterm xdg-utils --noconfirm --overwrite "*"
-  echo -e "${GREEN}✓ File manager, browsers, and terminal ready${NC}" >&2
-
-  echo -e "${YELLOW}Installing busybox (the real MVP)...${NC}" >&2
-  pacman -S busybox --noconfirm
+  # 3. Install and setup busybox as shell
+  echo -e "${YELLOW}${LOG_TAG} Setting up busybox as default shell...${NC}"
   busybox --install -s
   ln -sf /bin/busybox /bin/sh
-  chsh -s /bin/sh
-  echo -e "${GREEN}✓ Busybox installed as /bin/sh${NC}" >&2
+  echo -e "${GREEN}${LOG_TAG} Busybox set as /bin/sh${NC}"
 
-  echo -e "${YELLOW}Configuring dolphin as default file manager...${NC}" >&2
+  # 4. Create non-root user
+  echo -e "${YELLOW}${LOG_TAG} Creating andronux user...${NC}"
+  useradd -m -s /bin/sh andronux || true
+  echo "andronux:andronux" | chpasswd
+  echo "andronux ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/andronux
+  chmod 0440 /etc/sudoers.d/andronux
+  echo -e "${GREEN}${LOG_TAG} User created${NC}"
+
+  # 5. Download and install Android SDK tools
+  echo -e "${YELLOW}${LOG_TAG} Installing Android SDK tools...${NC}"
+  cd /tmp
+  curl -fL -o tools.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/35.0.2/android-sdk-tools-static-aarch64.zip
+  unzip -q -o tools.zip
+
+  if [ -d "build-tools" ]; then
+    cp build-tools/* /usr/local/bin/
+    chmod +x /usr/local/bin/aapt /usr/local/bin/aapt2 /usr/local/bin/zipalign 2>/dev/null || true
+  fi
+
+  if [ -d "platform-tools" ]; then
+    cp platform-tools/* /usr/local/bin/
+    chmod +x /usr/local/bin/adb /usr/local/bin/fastboot 2>/dev/null || true
+  fi
+
+  rm -rf tools.zip build-tools platform-tools others
+  echo -e "${GREEN}${LOG_TAG} Android SDK tools installed${NC}"
+
+  # 6. Install uber-apk-signer
+  echo -e "${YELLOW}${LOG_TAG} Installing uber-apk-signer...${NC}"
+  cd /tmp
+  curl -fL -o uber-apk-signer.jar https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar
+  mv uber-apk-signer.jar /usr/local/bin/
+  chmod +x /usr/local/bin/uber-apk-signer.jar
+  echo -e "${GREEN}${LOG_TAG} uber-apk-signer installed${NC}"
+
+  # 7. Download android.jar
+  echo -e "${YELLOW}${LOG_TAG} Downloading android.jar...${NC}"
+  mkdir -p /usr/local/lib
+  cd /tmp
+  curl -fL -o /usr/local/lib/android.jar https://raw.githubusercontent.com/Sable/android-platforms/master/android-34/android.jar
+  echo -e "${GREEN}${LOG_TAG} android.jar installed${NC}"
+
+  # 8. Configure Dolphin as default file manager
+  echo -e "${YELLOW}${LOG_TAG} Configuring desktop environment...${NC}"
   xdg-mime default org.kde.dolphin.desktop inode/directory
-  xdg-mime default org.kde.dolphin.desktop application/x-cpio
   xdg-mime default org.kde.dolphin.desktop application/x-directory
-  echo -e "${GREEN}✓ Dolphin set as default${NC}" >&2
 
-  echo -e "${YELLOW}Creating openbox config...${NC}" >&2
+  # 9. Create Openbox config
   mkdir -p /root/.config/openbox
   cat > /root/.config/openbox/rc.xml << '\''EOF'\''
 <?xml version="1.0" encoding="UTF-8"?>
@@ -137,9 +165,8 @@ proot-distro login archlinux -- bash -c '
   </applications>
 </openbox_config>
 EOF
-  echo -e "${GREEN}✓ Openbox configured${NC}" >&2
 
-  echo -e "${YELLOW}Setting up X11 startup...${NC}" >&2
+  # 10. Create .xinitrc
   cat > /root/.xinitrc << '\''EOF'\''
 #!/bin/sh
 openbox &
@@ -147,62 +174,20 @@ dolphin &
 exec tail -f /dev/null
 EOF
   chmod +x /root/.xinitrc
-  echo -e "${GREEN}✓ Startup script ready${NC}" >&2
 
-  echo -e "${YELLOW}Creating login reminder...${NC}" >&2
-  cat > /root/.profile << '\''EOF'\''
-# ~/.profile - Login shell startup
-cat << '\''BANNER'\''
-======== GLIBC/BASH INCOMPATIBILITY NOTICE ========
+  echo -e "${GREEN}${LOG_TAG} Desktop environment configured${NC}"
 
-The Problem:
-  Old glibc → bash works, but packages fail
-  New glibc → packages work, but bash breaks
-
-The Solution:
-  Use busybox sh (lightweight, reliable)
-
-What Works:
-  + Firefox (full GUI)
-  + Dolphin file manager
-  + Busybox utils (vi, sed, awk, grep, find)
-  + Java development environment
-  + Android build tools (aapt, apksigner)
-
-What Doesn'\''t:
-  - bash, nano, vim, neovim
-  - Most CLI pacman tools
-
-Tip: Use vi instead of nano, and you'\''re golden!
-====================================================
-BANNER
+  # 11. Create termux.properties in andronux home
+  echo -e "${YELLOW}${LOG_TAG} Creating termux.properties...${NC}"
+  mkdir -p /home/andronux/.termux
+  cat > /home/andronux/.termux/termux.properties << '\''EOF'\''
+# Termux configuration
+allow-external-apps = true
 EOF
-  chmod +x /root/.profile
-  echo -e "${GREEN}✓ Login reminder configured${NC}" >&2
+  chown -R andronux:andronux /home/andronux/.termux
 
-  echo -e "${GREEN}=== Setup complete! ===${NC}" >&2
+  echo -e "${GREEN}${LOG_TAG} Ubuntu setup complete!${NC}"
 '
 
-echo ""
-echo -e "${RED}======== GLIBC/BASH INCOMPATIBILITY NOTICE ========${NC}" >&2
-echo ""
-echo -e "${YELLOW}The Problem:${NC}" >&2
-echo -e "  Old glibc → bash works, but packages fail" >&2
-echo -e "  New glibc → packages work, but bash breaks" >&2
-echo ""
-echo -e "${GREEN}The Solution:${NC}" >&2
-echo -e "  Use busybox sh (lightweight, reliable)" >&2
-echo ""
-echo -e "${GREEN}What Works:${NC}" >&2
-echo -e "  + Firefox (full GUI)" >&2
-echo -e "  + Dolphin file manager" >&2
-echo -e "  + Busybox utils (vi, sed, awk, grep, find)" >&2
-echo ""
-echo -e "${RED}What Doesn't:${NC}" >&2
-echo -e "  - bash, nano, vim, neovim" >&2
-echo -e "  - Most CLI pacman tools" >&2
-echo ""
-echo -e "${YELLOW}Tip: Use ${BLUE}vi${YELLOW} instead of nano, and you're golden!${NC}" >&2
-echo -e "${RED}======================================================${NC}" >&2
-echo ""
-sleep 8
+echo -e "${GREEN}${LOG_TAG} Bootstrap installation completed successfully!${NC}"
+echo -e "${YELLOW}${LOG_TAG} You can now use Andronux with Ubuntu environment${NC}"

@@ -309,7 +309,7 @@ final class TermuxInstaller {
             final ProgressDialog progress = ProgressDialog.show(
                 activity,
                 null,
-                "Installing Arch Linux...\nYou will be brought back to this empty terminal once done.",
+                "Installing Ubuntu...\nYou will be brought back to this empty terminal once done.",
                 true,
                 false
             );
